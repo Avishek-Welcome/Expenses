@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>আমার খরচ (PWA)</title>
+    
+    <meta name="theme-color" content="#E91E63"/>
+    <link rel="apple-touch-icon" href="https://via.placeholder.com/192/E91E63/FFFFFF?text=খরচ">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="manifest" id="manifest-data" href="data:application/json;base64,eyJpY29ucyI6IFt7ICJzaXplcyI6ICIxOTJ4MTkyIiwgInR5cGUiOiAiaW1hZ2UvcG5nIiwgInNyYyI6ICJodHRwczovL3ZpYS5wbGFjZWhvbGRlci5jb20vMTkyL0U5MUU2My9GRkZGRkY/dGV4dD0lRUIlODElQUMlRUIlODIlQUElRkUlOTAlOUQiIH0sIHsgInNpemVzIjogIjUxMng1MTIiLCAidHlwZSI6ICJpbWFnZS9wbmciLCAic3JjIjogImh0dHBzOi8vdmlhLnBsYWNlaG9sZGVyLmNvbS81MTIvRTkxRTYzL0ZGRkZGRj90ZXh0PSVFOEIlOUQlQTIlRTglOUQlQjElRUIlODElQUMlRUIlODIlQUElRkUlOTAlOUQiIH1dLCAiZGlzcGxheSI6ICJzdGFuZGFsb25lIiwgIm5hbWUiOiAi4KSa4KS44KSf4KSCIOCkuOCkguCknOCkvuCSleCkkyIsICJzaG9ydF9uYW1lIjogIuCSleCkkyIsICJzdGFydF91cmwiOiAiLi8iIH0=">
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+    <style>
+        /* Modern UI এবং পিঙ্ক থিম CSS */
+        :root {
+            --primary-color: #E91E63; /* Deep Pink */
+            --secondary-color: #FFC0CB; /* Light Pink */
+            --light-bg: #F8F9FA; 
+            --card-bg: #FFFFFF;
+            --dark-text: #212529;
+            --income-color: #2ECC71;
+            --expense-color: #E74C3C;
+            --category-color-1: #48DBFB;
+            --category-color-2: #1DD1A1;
+            --category-color-3: #FFC0CB;
+            --category-color-4: #Feca57;
+            --category-color-5: #FF6B6B;
+        }
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: var(--light-bg);
+            color: var(--dark-text);
+            margin: 0;
+            padding: 20px 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container {
+            width: 100%;
+            max-width: 600px;
+            padding: 15px;
+        }
+        h1 {
+            font-size: 1.8em;
+            text-align: center;
+            color: var(--primary-color);
+            margin: 10px 0 20px;
+            font-weight: 700;
+        }
+        h2 {
+            font-size: 1.3em;
+            color: var(--primary-color);
+            margin-top: 25px;
+            margin-bottom: 15px;
+        }
+        
+        /* --- ব্যালেন্স কার্ড --- */
+        #total-balance {
+            background: linear-gradient(135deg, var(--primary-color), #FF4081);
+            color: white;
+            text-align: center;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            margin-bottom: 25px;
+        }
+        #total-balance div {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        #balance-amount {
+            font-size: 2.5em;
+            font-weight: 700;
+            display: block;
+            margin-top: 5px;
+        }
+        
+        /* --- ফর্ম ও ইনপুট --- */
+        #new-transaction-form {
+            background-color: var(--card-bg);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        input:not([type="button"]), select {
+            padding: 12px;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            width: 100%;
+            box-sizing: border-box;
+            font-size: 16px;
+            transition: border-color 0.2s;
+        }
+        input:focus {
+            border-color: var(--primary-color);
+            outline: none;
+        }
+        
+        /* --- স্লাইডিং ক্যাটাগরি --- */
+        #category-slider {
+            white-space: nowrap;
+            overflow-x: auto;
+            padding-bottom: 10px; 
+            margin-bottom: 5px;
+            -webkit-overflow-scrolling: touch;
+        }
+        .category-tag {
+            display: inline-block;
+            padding: 8px 15px;
+            margin-right: 10px;
+            border: 2px solid var(--secondary-color);
+            border-radius: 20px;
+            background-color: var(--card-bg);
+            color: var(--dark-text);
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.9em;
+        }
+        .category-tag.selected {
+            background-color: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+            box-shadow: 0 2px 5px rgba(233, 30, 99, 0.4);
+        }
+
+        /* --- ক্যালকুলেটর ও বাটন --- */
+        #calculator-display {
+            background-color: #fff;
+            border: 2px solid #dee2e6;
+            padding: 15px;
+            margin-bottom: 10px;
+            text-align: right;
+            font-size: 2em;
+            font-weight: 600;
+            border-radius: 8px;
+        }
+        #calculator-buttons {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .calc-btn {
+            padding: 15px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.2em;
+            cursor: pointer;
+            background-color: #f1f3f5;
+        }
+        .op-btn { 
+            background-color: var(--primary-color);
+            color: white;
+        }
+        .eq-btn { 
+            grid-column: span 2;
+        }
+
+        /* --- ফিল্টার ও চার্ট সেকশন --- */
+        #filter-options {
+            display: flex;
+            justify-content: space-between;
+            gap: 5px;
+            margin-bottom: 10px;
+        }
+        #filter-options button {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid var(--primary-color);
+            border-radius: 6px;
+            background-color: white;
+            color: var(--primary-color);
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.9em;
+        }
+        #filter-options button.active {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        #chart-container {
+            background-color: var(--card-bg);
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            margin-top: 20px;
+        }
+
+        /* --- লেনদেন তালিকা --- */
+        #transaction-list {
+            list-style: none;
+            padding: 0;
+        }
+        #transaction-list li {
+            position: relative;
+            background-color: var(--card-bg);
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            box-shadow: 0 1px 5px rgba(0, 0, 0, 0.08);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            overflow: hidden; 
+        }
+        .transaction-info {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .transaction-category {
+            font-size: 0.9em;
+            color: #777;
+        }
+        .transaction-amount {
+            font-size: 1.1em;
+            font-weight: 600;
+        }
+        .expense .transaction-amount {
+            color: var(--expense-color);
+        }
+        .income .transaction-amount {
+            color: var(--income-color);
+        }
+        .transaction-description {
+            font-size: 0.8em;
+            color: #A0A0A0;
+            margin-top: 2px;
+        }
+
+        /* --- ডিলিট বাটন (স্লাইড অ্যাকশন) --- */
+        .delete-btn {
+            position: absolute;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            width: 70px;
+            background-color: var(--expense-color);
+            color: white;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transform: translateX(100%);
+            transition: transform 0.3s ease-out;
+            font-size: 1.2em;
+        }
+        .transaction-item-content {
+            flex-grow: 1;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            padding-right: 10px;
+            transform: translateX(0);
+            transition: transform 0.3s ease-out;
+        }
+        .li-swiped .transaction-item-content {
+            transform: translateX(-70px);
+        }
+        .li-swiped .delete-btn {
+            transform: translateX(0);
+        }
+        #export-btn {
+            background-color: #6c757d;
+            border-radius: 8px;
+            color: white;
+            padding: 12px;
+            margin-top: 25px;
+            font-size: 16px;
+            width: 100%;
+            border: none;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>আমার খরচ 💰</h1>
+
+        <div id="total-balance">
+            <div>মোট ব্যালেন্স</div>
+            <span id="balance-amount">০.০০</span> ₹
+        </div>
+        
+        <form id="new-transaction-form">
+            <h2>নতুন এন্ট্রি</h2>
+            <label for="date">তারিখ:</label>
+            <input type="date" id="date" required>
+
+            <label>ক্যাটাগরি নির্বাচন করুন:</label>
+            <div id="category-slider">
+                </div>
+            <input type="hidden" id="category" value="" required>
+
+            <label for="description">বিবরণ (ঐচ্ছিক):</label>
+            <input type="text" id="description" placeholder="কী জন্য খরচ করলেন? (ঐচ্ছিক)">
+
+            <label for="amount-display">টাকার পরিমাণ (ইনকাম হলে পজিটিভ, খরচ হলে নেগেটিভ):</label>
+            <div id="calculator-display">0</div>
+            <input type="hidden" id="amount" value="0"> 
+
+            <div id="calculator-buttons">
+                <button type="button" class="calc-btn" data-value="7">7</button>
+                <button type="button" class="calc-btn" data-value="8">8</button>
+                <button type="button" class="calc-btn" data-value="9">9</button>
+                <button type="button" class="calc-btn op-btn" data-value="C">C</button>
+                
+                <button type="button" class="calc-btn" data-value="4">4</button>
+                <button type="button" class="calc-btn" data-value="5">5</button>
+                <button type="button" class="calc-btn" data-value="6">6</button>
+                <button type="button" class="calc-btn op-btn" data-value="+">+</button>
+
+                <button type="button" class="calc-btn" data-value="1">1</button>
+                <button type="button" class="calc-btn" data-value="2">2</button>
+                <button type="button" class="calc-btn" data-value="3">3</button>
+                <button type="button" class="calc-btn op-btn" data-value="-">-</button>
+
+                <button type="button" class="calc-btn" data-value=".">.</button>
+                <button type="button" class="calc-btn" data-value="0">0</button>
+                <button type="button" class="calc-btn op-btn eq-btn" data-value="=">=</button>
+            </div>
+
+            <button type="submit" id="add-btn">লেনদেন যোগ করুন</button>
+        </form>
+
+        <h2>ইতিহাস ও বিশ্লেষণ</h2>
+        <div id="filter-options">
+            <button id="filter-day" class="active" data-view="day">দিন অনুযায়ী</button>
+            <button id="filter-month" data-view="month">মাস অনুযায়ী</button>
+            <button id="filter-year" data-view="year">বছর অনুযায়ী</button>
+        </div>
+        <input type="date" id="date-filter" style="margin-top: 10px;">
+
+        <div id="chart-container">
+            <h3>মাসিক ব্যয়ের বন্টন (পাই চার্ট)</h3>
+            <canvas id="expenseChart"></canvas>
+            <p id="chart-message" style="text-align: center; color: #777; font-size: 0.9em;"></p>
+        </div>
+
+        <h2 style="margin-top: 30px;">লেনদেনের তালিকা</h2>
+        <ul id="transaction-list">
+            </ul>
+        
+        <button id="export-btn">ডেটা ডাউনলোড করুন (ব্যাকআপের জন্য)</button>
+    </div>
+
+    <script>
+        // জাভাস্ক্রিপ্ট লজিক
+
+        // --- PWA Service Worker রেজিস্ট্রেশন ---
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                const serviceWorkerContent = `
+                    self.addEventListener('install', (event) => {
+                        event.waitUntil(
+                            caches.open('expense-manager-cache-v4').then((cache) => {
+                                // Important: Cache all necessary assets including Chart.js CDN link
+                                return cache.addAll(['./expense_manager_advanced_chart.html', 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js']);
+                            })
+                        );
+                    });
+
+                    self.addEventListener('fetch', (event) => {
+                        event.respondWith(
+                            caches.match(event.request).then((response) => {
+                                return response || fetch(event.request);
+                            })
+                        );
+                    });
+                `;
+                
+                const blob = new Blob([serviceWorkerContent], { type: 'application/javascript' });
+                const swUrl = URL.createObjectURL(blob);
+                
+                navigator.serviceWorker.register(swUrl)
+                    .then(reg => console.log('Service Worker registered successfully!', reg))
+                    .catch(err => console.log('Service Worker registration failed:', err));
+            });
+        }
+        // --------------------------------------------------------
+
+        // কনস্ট্যান্টস
+        const CATEGORIES = [
+            'অভিষেক', 'পড়াশুনা', 'গীতা', 'মা', 'মোবাইল ইন্টারনেট', 'গাড়ি', 'মেইনটেন্যান্স', 'ইলেকট্রিক', 
+            'কেনাকাটা', 'মুদিখনা', 'সব্জী', 'ফল', 'মাছ মাংস', 'রেস্টুরেন্ট', 'ঘোরা', 'ডাক্তার ও ঔষধ',
+            'জমা কাপড়', 'অভিষিক্তা', 'অনুরিক্তা', 'শ্বশুর বাড়ি', 'অন্যান্য'
+        ];
+        const BACKGROUND_COLORS = [
+            '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40', '#E74C3C', '#2ECC71',
+            '#C2185B', '#F781D8', '#82B1FF', '#C8E6C9', '#FFD54F', '#7E57C2', '#5D4037', '#00BCD4',
+            '#A1887F', '#D4E157', '#64DD17', '#9E9E9E', '#78909C'
+        ];
+
+        // DOM উপাদান
+        const balanceDisplay = document.getElementById('balance-amount');
+        const list = document.getElementById('transaction-list');
+        const form = document.getElementById('new-transaction-form');
+        const amountInput = document.getElementById('amount');
+        const categoryHiddenInput = document.getElementById('category');
+        const descriptionInput = document.getElementById('description'); // নতুন
+        const dateInput = document.getElementById('date');
+        const dateFilterInput = document.getElementById('date-filter');
+        const filterButtons = document.querySelectorAll('#filter-options button');
+        const categorySlider = document.getElementById('category-slider');
+        const exportButton = document.getElementById('export-btn');
+
+        // চার্ট উপাদান
+        const ctx = document.getElementById('expenseChart').getContext('2d');
+        let expenseChart = null;
+
+        // ক্যালকুলেটর উপাদান
+        const calcDisplay = document.getElementById('calculator-display');
+        const calcButtons = document.querySelectorAll('#calculator-buttons .calc-btn');
+        let currentExpression = '0';
+        let isResultDisplayed = false;
+
+        // ডেটা
+        dateInput.valueAsDate = new Date();
+        dateFilterInput.valueAsDate = new Date();
+        let transactions = JSON.parse(localStorage.getItem('transactions_bn_advanced')) || [];
+        let currentView = 'day';
+
+        // --- ইউটিলিটি ফাংশন ---
+
+        function saveToLocalStorage() {
+            localStorage.setItem('transactions_bn_advanced', JSON.stringify(transactions));
+        }
+
+        function generateID() {
+            return Date.now(); 
+        }
+
+        // --- চার্ট ফাংশন ---
+        function updateChart(filteredTransactions) {
+            const expenses = filteredTransactions.filter(t => parseFloat(t.amount) < 0);
+            const expenseMap = {};
+
+            expenses.forEach(t => {
+                const category = t.category || 'অন্যান্য';
+                const amount = Math.abs(parseFloat(t.amount));
+                expenseMap[category] = (expenseMap[category] || 0) + amount;
+            });
+
+            const labels = Object.keys(expenseMap);
+            const data = Object.values(expenseMap);
+            const colors = labels.map((_, index) => BACKGROUND_COLORS[index % BACKGROUND_COLORS.length]);
+
+            document.getElementById('chart-message').innerText = '';
+
+            if (data.length === 0) {
+                document.getElementById('chart-message').innerText = 'এই সময়ের মধ্যে কোনো খরচ পাওয়া যায়নি।';
+                if (expenseChart) {
+                    expenseChart.destroy();
+                    expenseChart = null;
+                }
+                return;
+            }
+
+            if (expenseChart) {
+                expenseChart.data.labels = labels;
+                expenseChart.data.datasets[0].data = data;
+                expenseChart.data.datasets[0].backgroundColor = colors;
+                expenseChart.update();
+            } else {
+                expenseChart = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            data: data,
+                            backgroundColor: colors,
+                            hoverBackgroundColor: colors
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                position: 'right',
+                                align: 'start',
+                                labels: {
+                                    font: { family: 'Poppins' }
+                                }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        let label = context.label || '';
+                                        if (label) {
+                                            label += ': ';
+                                        }
+                                        const value = context.parsed;
+                                        return label + '₹' + value.toLocaleString('en-IN');
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+        
+        // --- স্লাইডিং ক্যাটাগরি রেন্ডারিং ও হ্যান্ডলার ---
+        function renderCategories() {
+            categorySlider.innerHTML = '';
+            CATEGORIES.forEach(cat => {
+                const tag = document.createElement('span');
+                tag.classList.add('category-tag');
+                tag.textContent = cat;
+                tag.dataset.category = cat;
+                tag.addEventListener('click', () => selectCategory(cat));
+                categorySlider.appendChild(tag);
+            });
+        }
+
+        function selectCategory(category) {
+            document.querySelectorAll('.category-tag').forEach(tag => tag.classList.remove('selected'));
+            const selectedTag = document.querySelector(.category-tag[data-category="${category}"]);
+            if (selectedTag) {
+                selectedTag.classList.add('selected');
+                categoryHiddenInput.value = category;
+            }
+        }
+        
+        // --- ক্যালকুলেটর ফাংশন ---
+        function handleCalculator(value) {
+            if (value === 'C') { 
+                currentExpression = '0';
+                isResultDisplayed = false;
+            } else if (value === '=') { 
+                try {
+                    let result = eval(currentExpression.replace('--', '+'));
+                    if (isNaN(result) || !isFinite(result)) {
+                        throw new Error('Invalid calculation');
+                    }
+                    currentExpression = result.toString();
+                    amountInput.value = result.toFixed(2); 
+                    isResultDisplayed = true;
+                } catch (e) {
+                    currentExpression = 'ত্রুটি';
+                    isResultDisplayed = true;
+                }
+            } else if (value === '+' || value === '-') {
+                if (/[+\-]$/.test(currentExpression) && currentExpression.slice(-1) !== value) {
+                    currentExpression = currentExpression.slice(0, -1);
+                }
+                currentExpression += value;
+                isResultDisplayed = false;
+            } else if (value === '.') {
+                let parts = currentExpression.split(/[\+\-]/);
+                let lastPart = parts[parts.length - 1];
+                if (!lastPart.includes('.')) {
+                    currentExpression += value;
+                }
+                isResultDisplayed = false;
+            } else { 
+                if (currentExpression === '0' || isResultDisplayed || currentExpression === 'ত্রুটি') {
+                    currentExpression = value;
+                    isResultDisplayed = false;
+                } else {
+                    currentExpression += value;
+                }
+            }
+            calcDisplay.innerText = currentExpression;
+            if (!isResultDisplayed && currentExpression !== '0' && !currentExpression.includes('+') && !currentExpression.includes('-')) {
+                 amountInput.value = parseFloat(currentExpression) || 0;
+            }
+        }
+        
+        // --- লেনদেন রেন্ডারিং এবং স্লাইড অ্যাকশন ---
+        function addTransactionDOM(transaction) {
+            const amount = parseFloat(transaction.amount);
+            const itemClass = amount < 0 ? 'expense' : 'income';
+            const description = transaction.description || 'বিবরণ নেই';
+            
+            const item = document.createElement('li');
+            item.classList.add(itemClass);
+
+            const content = document.createElement('div');
+            content.classList.add('transaction-item-content');
+            
+            // INR প্রতীক ব্যবহার
+            const formattedAmount = Math.abs(amount).toLocaleString('en-IN', { minimumFractionDigits: 2 });
+            const sign = amount < 0 ? '-' : '+';
+
+            content.innerHTML = `
+                <div class="transaction-info">
+                    <div class="transaction-category">${transaction.category} <span>(${transaction.date})</span></div>
+                    <div class="transaction-description">${description}</div>
+                </div>
+                <span class="transaction-amount">${sign} ₹${formattedAmount}</span>
+            `;
+            item.appendChild(content);
+
+            const deleteBtn = document.createElement('button');
+            deleteBtn.classList.add('delete-btn');
+            deleteBtn.textContent = 'ডিলিট';
+            deleteBtn.addEventListener('click', () => window.removeTransaction(transaction.id));
+            item.appendChild(deleteBtn);
+            
+            // Swipe/Drag Logic
+            let startX;
+            let currentX = 0;
+            const deleteThreshold = 50; 
+
+            item.addEventListener('touchstart', (e) => {
+                startX = e.touches[0].clientX;
+                list.querySelectorAll('.li-swiped').forEach(el => {
+                    if (el !== item) el.classList.remove('li-swiped');
+                });
+            });
+
+            item.addEventListener('touchmove', (e) => {
+                currentX = e.touches[0].clientX;
+                let diff = currentX - startX;
+                if (diff < 0) { 
+                    content.style.transform = translateX(${Math.max(-70, diff)}px);
+                    deleteBtn.style.transform = translateX(${Math.max(0, 70 + diff)}px);
+                    e.preventDefault();
+                }
+            });
+
+            item.addEventListener('touchend', () => {
+                let diff = currentX - startX;
+                content.style.transform = '';
+                deleteBtn.style.transform = '';
+
+                if (diff < -deleteThreshold) {
+                    item.classList.add('li-swiped');
+                } else {
+                    item.classList.remove('li-swiped');
+                }
+                currentX = 0;
+                startX = 0;
+            });
+
+
+            list.appendChild(item);
+        }
+
+        function updateBalance(filteredTransactions) {
+            const amounts = filteredTransactions.map(transaction => parseFloat(transaction.amount));
+            const total = amounts.reduce((acc, item) => (acc += item), 0);
+            
+            // INR সিম্বল ব্যবহার
+            balanceDisplay.innerText = total.toLocaleString('en-IN', { minimumFractionDigits: 2 });
+            
+            const balanceContainer = document.getElementById('total-balance');
+            balanceContainer.style.background = total >= 0 
+                ? 'linear-gradient(135deg, var(--primary-color), #FF4081)' 
+                : 'linear-gradient(135deg, var(--expense-color), #FF7F7F)';
+        }
+        
+        // --- ফিল্টারিং লজিক (মাস ও বছর ফিক্স) ---
+        function filterTransactions() {
+            const filterType = currentView;
+            const filterDateStr = dateFilterInput.value;
+            
+            let filteredTransactions = transactions.filter(transaction => {
+                // Ensure correct date comparison without timezone issues
+                const transDate = new Date(transaction.date);
+                const filterDate = new Date(filterDateStr);
+
+                const transYear = transDate.getFullYear();
+                const transMonth = transDate.getMonth();
+
+                const filterYear = filterDate.getFullYear();
+                const filterMonth = filterDate.getMonth();
+                const filterDay = filterDate.getDate();
+
+                if (filterType === 'day') {
+                    // YYYY-MM-DD ফরম্যাটে সরাসরি তুলনা
+                    return transaction.date === filterDateStr;
+                } else if (filterType === 'month') {
+                    // মাস ও বছর সমান হতে হবে
+                    return transYear === filterYear && 
+                           transMonth === filterMonth;
+                } else if (filterType === 'year') {
+                    // শুধু বছর সমান হতে হবে
+                    return transYear === filterYear;
+                }
+                return true; 
+            });
+
+            // তারিখ অনুযায়ী সাজান (নতুন এন্ট্রি আগে)
+            filteredTransactions.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            list.innerHTML = '';
+            if (filteredTransactions.length === 0) {
+                 list.innerHTML = <li style="justify-content: center; color: #999; background: #fff; border-left: none;">এই ফিল্টারে কোনো লেনদেন পাওয়া যায়নি।</li>;
+            } else {
+                 filteredTransactions.forEach(addTransactionDOM);
+            }
+            updateBalance(filteredTransactions);
+            
+            // চার্ট আপডেটের জন্য মাসিক ফিল্টার দরকার 
+            if (currentView === 'month') {
+                updateChart(filteredTransactions);
+            } else {
+                // শুধু মাসিক ভিউতে চার্ট দেখান
+                if (expenseChart) {
+                    expenseChart.destroy();
+                    expenseChart = null;
+                }
+                document.getElementById('chart-message').innerText = 'চার্ট দেখতে "মাস অনুযায়ী" ফিল্টার ব্যবহার করুন।';
+            }
+        }
+
+        // --- ইভেন্ট হ্যান্ডলার ---
+        function addTransaction(e) {
+            e.preventDefault();
+
+            const amount = parseFloat(amountInput.value);
+            const category = categoryHiddenInput.value;
+            const date = dateInput.value;
+            const description = descriptionInput.value.trim(); // নতুন
+
+            if (isNaN(amount) || category === '' || amount === 0) {
+                alert('অনুগ্রহ করে একটি বৈধ টাকার পরিমাণ এবং ক্যাটাগরি নির্বাচন করুন।');
+                return;
+            }
+
+            const transaction = {
+                id: generateID(),
+                amount: amount.toFixed(2),
+                category,
+                date,
+                description // নতুন বিবরণ যোগ করা হলো
+            };
+
+            transactions.push(transaction);
+            saveToLocalStorage();
+            
+            // নতুন এন্ট্রি হলে দিন অনুযায়ী ভিউতে যান
+            dateFilterInput.value = date;
+            handleFilterChange('day'); 
+
+            // ফর্ম এবং ক্যালকুলেটর রিসেট করুন
+            categoryHiddenInput.value = '';
+            descriptionInput.value = ''; // বিবরণ রিসেট
+            document.querySelectorAll('.category-tag').forEach(tag => tag.classList.remove('selected'));
+            amountInput.value = '0';
+            currentExpression = '0';
+            calcDisplay.innerText = '0';
+            dateInput.valueAsDate = new Date();
+        }
+
+        window.removeTransaction = function(id) {
+            transactions = transactions.filter(transaction => transaction.id !== id);
+            saveToLocalStorage();
+            filterTransactions(); 
+        }
+
+        function handleFilterChange(view) {
+            currentView = view;
+            filterButtons.forEach(btn => btn.classList.remove('active'));
+            document.getElementById(filter-${view}).classList.add('active');
+            filterTransactions();
+        }
+
+        function exportData() {
+            const dataStr = JSON.stringify(transactions, null, 2);
+            const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+            
+            const exportFileDefaultName = 'expense_data_' + new Date().toISOString().slice(0,10) + '.json';
+            
+            const linkElement = document.createElement('a');
+            linkElement.setAttribute('href', dataUri);
+            linkElement.setAttribute('download', exportFileDefaultName);
+            linkElement.click();
+            alert('আপনার ডেটা JSON ফাইল হিসেবে ডাউনলোড করা হয়েছে।');
+        }
+
+        // ইভেন্ট লিসেনার্স
+        form.addEventListener('submit', addTransaction);
+        exportButton.addEventListener('click', exportData);
+        dateFilterInput.addEventListener('change', filterTransactions);
+        filterButtons.forEach(button => {
+            button.addEventListener('click', (e) => handleFilterChange(e.target.dataset.view));
+        });
+        calcButtons.forEach(button => {
+            button.addEventListener('click', () => handleCalculator(button.dataset.value));
+        });
+
+        // অ্যাপ্লিকেশন ইনিশিয়ালাইজেশন
+        function init() {
+            renderCategories();
+            dateFilterInput.valueAsDate = new Date(); 
+            // ডিফল্টভাবে মাসিক ভিউতে যান যাতে চার্ট দেখা যায়
+            handleFilterChange('month'); 
+        }
+
+        init();
+    </script>
+</body>
+</html>
